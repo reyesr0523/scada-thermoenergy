@@ -40,19 +40,29 @@ if "historial_scada" not in st.session_state:
     )
 
 # ==============================================================================
-# 1. ENCABEZADO: INTEGRACIÓN DE TU LOGO CORPORATIVO REAL
+# 1. ENCABEZADO: INTEGRACIÓN DE TU LOGO CORPORATIVO REAL (BLINDADO)
 # ==============================================================================
 col_logo, col_titulo = st.columns([1, 2])
 
 with col_logo:
     try:
-        if os.path.exists("LOGO EMPRESA.jpeg"):
-            imagen_logo = Image.open("LOGO EMPRESA.jpeg")
+        # Lista de posibles nombres y formatos que puede tener tu logo en el servidor
+        posibles_logos = ["LOGO EMPRESA.jpeg", "LOGO EMPRESA.jpg", "LOGO EMPRESA.png"]
+        logo_encontrado = None
+        
+        for nombre_archivo in posibles_logos:
+            if os.path.exists(nombre_archivo):
+                logo_encontrado = nombre_archivo
+                break
+        
+        if logo_encontrado:
+            imagen_logo = Image.open(logo_encontrado)
             st.image(imagen_logo, use_container_width=True)
         else:
-            st.info("📌 Coloca 'LOGO EMPRESA.jpeg' en la carpeta del laboratorio.")
+            st.info("📌 Archivo de imagen 'LOGO EMPRESA' no detectado o incompatible.")
+            
     except Exception as e:
-        st.error(f"Error al cargar la imagen del logo: {e}")
+        st.error(f"Error al procesar la imagen del logo: {e}")
 
 with col_titulo:
     st.subheader("REYES THERMOENERGY E.I.R.L.")
@@ -60,7 +70,6 @@ with col_titulo:
     st.markdown("**Plataforma de Gestión Energética e Indicadores de Sostenibilidad**")
 
 st.markdown("---")
-
 # ==============================================================================
 # 2. NUEVO SECTOR: CONFIGURACIÓN DEL REFRIGERANTE (COMPLIANCE AMBIENTAL)
 # ==============================================================================
