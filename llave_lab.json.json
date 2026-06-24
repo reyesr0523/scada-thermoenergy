@@ -1,0 +1,13 @@
+{
+  "type": "service_account",
+  "project_id": "lab-hvac-r-reyesthermoenergy",
+  "private_key_id": "21cf23a5408ad6d9366834387171f0f66756cda4",
+  "private_key": "-----BEGIN PRIVATE KEY-----\nMIIEvAIBADANBgkqhkiG9w0BAQEFAASCBKYwggSiAgEAAoIBAQCwpZ0MyV5u+Qs/\n0E8vV+ETX7IiIA2+BhKsMbX4TEuACWiJj6lxnBlRzrEX1rfjBwsmMCe+F5nP6GFX\nGGZe346cSOv/OSyRjF1pFAOZGx75g7bBetctdJK2/twn76RsPDIlk7I3gKlksge/\nX0m6PpwnL/2LsgN3Rv6K7BRBoGEPKGFs39UmUnrH6uWNlGFQ7BO8I/w9RD4AgZZE\n28wiSIb1RXgKRfN8U9xj8DA9VXxNAZWkIl4fOH9wq4crVfTFIEmokHFZx5THmVic\nhGT3o3NJJnUTPwTJB+7q4/IfEPHSC604xucAAeQo7g/w+zjtVnnFAq8EEPtaLzLr\nB7o2eDdnAgMBAAECggEADBf9Or5gljq7r+3sNe1kzfBBIFVPIOGGjr5v2w98zcfB\nyJqK0Gnjpoupk9xnRjDvF6QNXIDTeX313WzLZBcXIDuygzc1W25KM42jZMHhatYU\ngYY49suNLd/LT8/4KFGDYg+MuysLrdwDFsbdzn/x2JGltgDafDnikb1G8mqZ/9u3\n5F6V6u9FlwGvdJYAQZWviAPObet0QkeXGeidlovYH8TH+SiMH1vp0RUy/aqgkT5P\neKuifFpFXAKmLnZz6l3EbNImQWt38ITiqFeRtb1q5kxPV0r4ftjj8AR9kDplSw7l\nyNjS6MdTt33jCdkS0qUpS7qsmquCqekADGS19OVDyQKBgQDff3OwJvE162lg1rp6\nNdTtSUwTf1Gr4B9jjgA9hA5lDIQ/JPU3EBO1I7H9yUvo84kEP2ihu6EPhT2+50oC\nP+//43foo0nb1GboeJ/RJjIprPUOG64qbUHxkzq5wkULWAkUQpazJ0s01gjQhBUM\n2cKnwNFnTRKjHKWm3Jbzc6WcjwKBgQDKVfWh97uxCtatKS8deaKgRTeuN+RajN/V\nE4NxrnkLuiBlhsDwdo5//fPjHYPXpxfHjM+KlHu3CH+QMUvRnAAirBAm59wyKAMe\ngkTxFjdPlETvl0Qul8FN5qgTDfUJTWQf2MKkBZ9BEuHohBX+hiCeVuzXd2OGD4zq\nbs10AUbTqQKBgE0yq9YjjVuvhcWiReUipPqVP8bYSnCQyKbNjL2y2HoE2cUp0d2E\nGxqNStS7bBH51ND3yf9bXOWMg2hmYYTnatG7U1ay2DcrZaRUzfcjN1531GlcHEuh\nU47K6RTyyoCBlxk9aupU30BP0dmcVd0LdpYVHv+MeqyGn51EQouy3Xh3AoGAEZUc\nrkF31u+pLgz5IieSwTiimQoUVuYNAVgbwQI3VJSNAiWOmJbE1Ux9KAxFi7TidR3A\nXzt98K7VXvNZslJLFLg9AxR85wLhGoKZeRXEIq8wul07uIzJaHqVumopE/DctYPB\njj1K1H3OkcUAoEiJhxjopeSjCmBJj4mnYuBFhlkCgYAt9jeKWZY8nrbZBaa3YRdA\n2LYvb5UzBI5XXMOhv+uKiQcBO3+nB/8dgljBPltyM5Pp9QMMV+5shFsWOj/c/Cp/\nP8/p5DmZZrGT9sK5IkKSGRbNSE1cFSqtYnWSCoJFTKfaKUMP9Ipo93a3e1l02vCc\nyLXzCOVX53jU2svuVsln1A==\n-----END PRIVATE KEY-----\n",
+  "client_email": "firebase-adminsdk-fbsvc@lab-hvac-r-reyesthermoenergy.iam.gserviceaccount.com",
+  "client_id": "106173582382428234465",
+  "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+  "token_uri": "https://oauth2.googleapis.com/token",
+  "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
+  "client_x509_cert_url": "https://www.googleapis.com/robot/v1/metadata/x509/firebase-adminsdk-fbsvc%40lab-hvac-r-reyesthermoenergy.iam.gserviceaccount.com",
+  "universe_domain": "googleapis.com"
+}
