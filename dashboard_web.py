@@ -17,12 +17,34 @@ st.set_page_config(
     initial_sidebar_state="collapsed"
 )
 
-# # Inicializar Firebase de forma segura evitando duplicados en la nube
+# Inicializar Firebase de forma segura evitando duplicados en la nube
 if not firebase_admin._apps:
-    # Aquí va tu código actual de inicialización (usa tus credenciales y tu URL)
-    firebase_admin.initialize_app(cred, {
-        'databaseURL': 'https://lab-hvac-r-reyesthermoenergy-default-rtdb.firebaseio.com/'
-    })
+    try:
+        # Reconstruir el diccionario de credenciales desde los Secrets de Streamlit
+        creds_dict = {
+            "type": st.secrets["firebase"]["type"],
+            "project_id": st.secrets["firebase"]["project_id"],
+            "private_key_id": st.secrets["firebase"]["private_key_id"],
+            # Truco de ingeniería para limpiar los saltos de línea en la nube:
+            "private_key": st.secrets["firebase"]["private_key"].replace("\\n", "\n"),
+            "client_email": st.secrets["firebase"]["client_email"],
+            "client_id": st.secrets["firebase"]["client_id"],
+            "auth_uri": st.secrets["firebase"]["auth_uri"],
+            "token_uri": st.secrets["firebase"]["token_uri"],
+            "auth_provider_x509_cert_url": st.secrets["firebase"]["auth_provider_x509_cert_url"],
+            "client_x509_cert_url": st.secrets["firebase"]["client_x509_cert_url"],
+            "universe_domain": st.secrets["firebase"]["universe_domain"]
+        }
+        
+        # Generar certificado de autenticación
+        cred = credentials.Certificate(creds_dict)
+        
+        # Inicializar la app con la base de datos en tiempo real
+        firebase_admin.initialize_app(cred, {
+            'databaseURL': 'https://lab-hvac-r-reyesthermoenergy-default-rtdb.firebaseio.com/'
+        })
+    except Exception as error_fb:
+        st.error(f"Error crítico al conectar con los servicios de seguridad de Firebase: {error_fb}")
 else:
     # Si ya existía la app, simplemente usamos la que está activa
     firebase_admin.get_app()
@@ -67,6 +89,22 @@ with col_titulo:
     st.markdown("**Plataforma de Gestión Energética e Indicadores de Sostenibilidad**")
 
 st.markdown("---")
+
+# ==============================================================================
+# INTERFAZ SCADA: LECTURA EN TIEMPO REAL (Asegura tener el resto de tus gráficas abajo)
+# ==============================================================================
+try:
+    # Leer el nodo de Firebase de forma segura
+    datos = nodo_sensor.get()
+    
+    if datos:
+        st.success("📡 Telemetría IoT en línea conectada exitosamente.")
+        # Aquí puedes continuar con la lógica de tus métricas y gráficas usando 'datos'
+    else:
+        st.warning("⚠️ Conectado a Firebase, pero el nodo 'sensor_1' está vacío o sin datos.")
+except Exception as e:
+    st.error(f"Error en adquisición de datos en tiempo real: {e}")
+    
 # ==============================================================================
 # 2. NUEVO SECTOR: CONFIGURACIÓN DEL REFRIGERANTE (COMPLIANCE AMBIENTAL)
 # ==============================================================================
