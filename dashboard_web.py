@@ -176,7 +176,7 @@ try:
                 }])
                 st.session_state.historial_scada = pd.concat([st.session_state.historial_scada, nueva_fila]).tail(30)
 
-            # --- RE-RENDERIZAR MEDIDORES EN SUS MARCADORES ---
+            # --- RE-RENDERIZAR MEDIDORES EN SUS MARCADORES CORREGIDOS ---
             with marcador_alerta.container():
                 if temp > 10.0:
                     st.error(f"⚠️ **DESVIACIÓN CRÍTICA DETECTADA** | Pérdida de Eficiencia Térmica. Temperatura: {temp} °C")
