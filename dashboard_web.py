@@ -17,15 +17,15 @@ st.set_page_config(
     initial_sidebar_state="collapsed"
 )
 
-# Inicializar Firebase de forma segura evitando duplicados en la nube
+# Inicializar Firebase de forma segura evitando duplicados y errores de firma JWT
 if not firebase_admin._apps:
     try:
-        # Reconstruir el diccionario de credenciales desde los Secrets de Streamlit
+        # Reconstruir el diccionario de credenciales desde los Secrets de Streamlit con limpieza estricta
         creds_dict = {
             "type": st.secrets["firebase"]["type"],
             "project_id": st.secrets["firebase"]["project_id"],
             "private_key_id": st.secrets["firebase"]["private_key_id"],
-            # Truco de ingeniería para limpiar los saltos de línea en la nube:
+            # Parche de ingeniería crítico para procesar correctamente las comillas triples TOML:
             "private_key": st.secrets["firebase"]["private_key"].replace("\\n", "\n"),
             "client_email": st.secrets["firebase"]["client_email"],
             "client_id": st.secrets["firebase"]["client_id"],
@@ -76,7 +76,8 @@ with col_logo:
         
         if logo_encontrado:
             imagen_logo = Image.open(logo_encontrado)
-            st.image(imagen_logo, use_container_width=True)
+            # Reemplazado use_container_width por width='stretch' según directrices de actualización
+            st.image(imagen_logo, width='stretch')
         else:
             st.info("📌 Archivo de imagen 'LOGO EMPRESA' no detectado o incompatible.")
             
@@ -91,19 +92,17 @@ with col_titulo:
 st.markdown("---")
 
 # ==============================================================================
-# INTERFAZ SCADA: LECTURA EN TIEMPO REAL (Asegura tener el resto de tus gráficas abajo)
+# INTERFAZ SCADA: LECTURA EN TIEMPO REAL
 # ==============================================================================
 try:
-    # Leer el nodo de Firebase de forma segura
-    datos = nodo_sensor.get()
-    
-    if datos:
-        st.success("📡 Telemetría IoT en línea conectada exitosamente.")
-        # Aquí puedes continuar con la lógica de tus métricas y gráficas usando 'datos'
+    # Leer el nodo de Firebase de forma segura antes de iniciar el bucle
+    datos_control = nodo_sensor.get()
+    if datos_control:
+        st.toast("📡 Telemetría IoT en línea conectada exitosamente.", icon="⚡")
     else:
         st.warning("⚠️ Conectado a Firebase, pero el nodo 'sensor_1' está vacío o sin datos.")
 except Exception as e:
-    st.error(f"Error en adquisición de datos en tiempo real: {e}")
+    st.error(f"Error en adquisición inicial de datos: {e}")
     
 # ==============================================================================
 # 2. NUEVO SECTOR: CONFIGURACIÓN DEL REFRIGERANTE (COMPLIANCE AMBIENTAL)
@@ -152,78 +151,84 @@ st.download_button(
 # ==============================================================================
 # 3. BUCLE SCADA EN TIEMPO REAL CON CÁLCULOS TERMODINÁMICOS
 # ==============================================================================
-while True:
-    datos = nodo_sensor.get()
-    
-    if datos:
-        temp = datos.get('temperatura', 0.0)
-        estado = datos.get('estado_compresor', 'UNKNOWN')
-        actualizacion = datos.get('ultima_actualizacion', '---')
+try:
+    while True:
+        datos = nodo_sensor.get()
         
-        # --- MODELADO Y CÁLCULOS DE INGENIERÍA ---
-        if estado == "ON":
-            consumo_kw = round(4.5 + (temp * 0.05), 2)  
-        else:
-            consumo_kw = 0.20  
+        if datos:
+            temp = datos.get('temperatura', 0.0)
+            estado = datos.get('estado_compresor', 'UNKNOWN')
+            actualizacion = datos.get('ultima_actualizacion', '---')
             
-        # Factor de emisión eléctrico base
-        emisiones_co2 = round(consumo_kw * 0.202, 3)
-        
-        # COP Termodinámico estimado (ASHRAE / Carnot simplificado)
-        if estado == "ON" and temp != 0:
-            cop_estimado = round(abs(273.15 + temp) / abs(temp - 45.0), 2)
-        else:
-            cop_estimado = 0.0
-            
-        # --- GUARDAR HISTORIAL ---
-        ahora_str = datetime.now().strftime("%H:%M:%S")
-        if st.session_state.historial_scada.empty or st.session_state.historial_scada.iloc[-1]["Temperatura_C"] != temp:
-            nueva_fila = pd.DataFrame([{
-                "Fecha_Hora": ahora_str, 
-                "Temperatura_C": temp, 
-                "Compresor": estado,
-                "Consumo_kW": consumo_kw,
-                "Emisiones_CO2": emisiones_co2
-            }])
-            st.session_state.historial_scada = pd.concat([st.session_state.historial_scada, nueva_fila]).tail(30)
-
-        # --- RE-RENDERIZAR MEDIDORES EN SUS MARCADORES ---
-        with marcador_alerta.container():
-            if temp > 10.0:
-                st.error(f"⚠️ **DESVIACIÓN CRÍTICA DETECTADA** | Pérdida de Eficiencia Térmica. Temperatura: {temp} °C")
+            # --- MODELADO Y CÁLCULOS DE INGENIERÍA ---
+            if estado == "ON":
+                consumo_kw = round(4.5 + (temp * 0.05), 2)  
             else:
-                st.success("✅ **SISTEMA EFICIENTE** | Operación bajo parámetros de Consumo Óptimo (HACCP & ISO 14001)")
-
-        with marcador_kpis_tecnicos.container():
-            st.markdown("### 📊 Monitoreo de Variables Técnicas (Ciclo Frigorífico)")
-            col1, col2, col3 = st.columns(3)
-            col1.metric(label="Temperatura Sensor 1", value=f"{temp} °C")
-            col2.metric(label="Estado del Compresor", value=f"RUNNING ({estado})" if estado == "ON" else "STANDBY (OFF)")
-            col3.metric(label="Eficiencia del Ciclo (COP)", value=f"{cop_estimado} Pts" if cop_estimado > 0 else "0.00 STR")
-
-        with marcador_sustentabilidad.container():
-            st.markdown("### 🌱 Indicadores Ambientales y Potencial de Gas (ISO 14064)")
-            col_sust_1, col_sust_2, col_sust_3 = st.columns(3)
-            
-            col_sust_1.metric(label="Demanda Instantánea", value=f"{consumo_kw} kW")
-            col_sust_2.metric(label="Huella de Carbono (Red)", value=f"{emisiones_co2} kg CO₂/h")
-            
-            # KPI Dinámico de Impacto por Fuga (GWP)
-            if gwp_actual > 1000:
-                col_sust_3.metric(label="Índice PCA / GWP (Fuga)", value=f"{gwp_actual}", delta="ALTO IMPACTO", delta_color="inverse")
-            else:
-                col_sust_3.metric(label="Índice PCA / GWP (Fuga)", value=f"{gwp_actual}", delta="ECO-EFICIENTE")
+                consumo_kw = 0.20  
                 
-            st.caption(f"**Seguridad ASHRAE:** {gas_info['Clase']} | **Estatus Normativo:** {gas_info['Norma']}")
-            st.markdown("---")
+            # Factor de emisión eléctrico base
+            emisiones_co2 = round(consumo_kw * 0.202, 3)
+            
+            # COP Termodinámico estimado (ASHRAE / Carnot simplificado)
+            if estado == "ON" and temp != 0:
+                cop_estimado = round(abs(273.15 + temp) / abs(temp - 45.0), 2)
+            else:
+                cop_estimado = 0.0
+                
+            # --- GUARDAR HISTORIAL ---
+            ahora_str = datetime.now().strftime("%H:%M:%S")
+            if st.session_state.historial_scada.empty or st.session_state.historial_scada.iloc[-1]["Temperatura_C"] != temp:
+                nueva_fila = pd.DataFrame([{
+                    "Fecha_Hora": ahora_str, 
+                    "Temperatura_C": temp, 
+                    "Compresor": estado,
+                    "Consumo_kW": consumo_kw,
+                    "Emisiones_CO2": emisiones_co2
+                }])
+                st.session_state.historial_scada = pd.concat([st.session_state.historial_scada, nueva_fila]).tail(30)
 
-        with marcador_grafica.container():
-            st.markdown("### 📈 Líneas de Tendencia del Sistema Integrado")
-            if not st.session_state.historial_scada.empty:
-                df_grafica = st.session_state.historial_scada.set_index("Fecha_Hora")
-                st.line_chart(df_grafica[["Temperatura_C", "Consumo_kW"]])
+            # --- RE-RENDERIZAR MEDIDORES EN SUS MARCADORES ---
+            with marcador_alerta.checkbox_visible if hasattr(marcador_alerta, 'checkbox_visible') else marcador_alerta.container():
+                if temp > 10.0:
+                    st.error(f"⚠️ **DESVIACIÓN CRÍTICA DETECTADA** | Pérdida de Eficiencia Térmica. Temperatura: {temp} °C")
+                else:
+                    st.success("✅ **SISTEMA EFICIENTE** | Operación bajo parámetros de Consumo Óptimo (HACCP & ISO 14001)")
 
-        with marcador_sincronizacion.container():
-            st.caption(f"Última lectura del bus de datos IoT: {actualizacion} | REYES THERMOENERGY E.I.R.L.")
+            with marcador_kpis_tecnicos.container():
+                st.markdown("### 📊 Monitoreo de Variables Técnicas (Ciclo Frigorífico)")
+                col1, col2, col3 = st.columns(3)
+                col1.metric(label="Temperatura Sensor 1", value=f"{temp} °C")
+                col2.metric(label="Estado del Compresor", value=f"RUNNING ({estado})" if estado == "ON" else "STANDBY (OFF)")
+                col3.metric(label="Eficiencia del Ciclo (COP)", value=f"{cop_estimado} Pts" if cop_estimado > 0 else "0.00 STR")
 
-    time.sleep(2)
+            with marcador_sustentabilidad.container():
+                st.markdown("### 🌱 Indicadores Ambientales y Potencial de Gas (ISO 14064)")
+                col_sust_1, col_sust_2, col_sust_3 = st.columns(3)
+                
+                col_sust_1.metric(label="Demanda Instantánea", value=f"{consumo_kw} kW")
+                col_sust_2.metric(label="Huella de Carbono (Red)", value=f"{emisiones_co2} kg CO₂/h")
+                
+                # KPI Dinámico de Impacto por Fuga (GWP)
+                if gwp_actual > 1000:
+                    col_sust_3.metric(label="Índice PCA / GWP (Fuga)", value=f"{gwp_actual}", delta="ALTO IMPACTO", delta_color="inverse")
+                else:
+                    col_sust_3.metric(label="Índice PCA / GWP (Fuga)", value=f"{gwp_actual}", delta="ECO-EFICIENTE")
+                    
+                st.caption(f"**Seguridad ASHRAE:** {gas_info['Clase']} | **Estatus Normativo:** {gas_info['Norma']}")
+                st.markdown("---")
+
+            with marcador_grafica.container():
+                st.markdown("### 📈 Líneas de Tendencia del Sistema Integrado")
+                if not st.session_state.historial_scada.empty:
+                    df_grafica = st.session_state.historial_scada.set_index("Fecha_Hora")
+                    st.line_chart(df_grafica[["Temperatura_C", "Consumo_kW"]])
+
+            with marcador_sincronizacion.container():
+                st.caption(f"Última lectura del bus de datos IoT: {actualizacion} | REYES THERMOENERGY E.I.R.L.")
+
+        # Pausa e iteración controlada del framework de Streamlit
+        time.sleep(2)
+        st.rerun()
+
+except Exception as loop_error:
+    st.error(f"Error en el ciclo de actualización SCADA: {loop_error}")
