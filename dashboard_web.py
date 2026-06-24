@@ -50,7 +50,10 @@ else:
     firebase_admin.get_app()
 
 # Conexión al nodo del sensor en Firebase
-nodo_sensor = db.reference('laboratorio_automatizacion/sensor_1')
+try:
+    nodo_sensor = db.reference('laboratorio_automatizacion/sensor_1')
+except Exception as e:
+    st.error(f"Error al establecer referencia del bus de datos: {e}")
 
 # Inicializar el historial de datos en la memoria de la sesión
 if "historial_scada" not in st.session_state:
@@ -76,7 +79,6 @@ with col_logo:
         
         if logo_encontrado:
             imagen_logo = Image.open(logo_encontrado)
-            # Reemplazado use_container_width por width='stretch' según directrices de actualización
             st.image(imagen_logo, width='stretch')
         else:
             st.info("📌 Archivo de imagen 'LOGO EMPRESA' no detectado o incompatible.")
@@ -90,19 +92,6 @@ with col_titulo:
     st.markdown("**Plataforma de Gestión Energética e Indicadores de Sostenibilidad**")
 
 st.markdown("---")
-
-# ==============================================================================
-# INTERFAZ SCADA: LECTURA EN TIEMPO REAL
-# ==============================================================================
-try:
-    # Leer el nodo de Firebase de forma segura antes de iniciar el bucle
-    datos_control = nodo_sensor.get()
-    if datos_control:
-        st.toast("📡 Telemetría IoT en línea conectada exitosamente.", icon="⚡")
-    else:
-        st.warning("⚠️ Conectado a Firebase, pero el nodo 'sensor_1' está vacío o sin datos.")
-except Exception as e:
-    st.error(f"Error en adquisición inicial de datos: {e}")
     
 # ==============================================================================
 # 2. NUEVO SECTOR: CONFIGURACIÓN DEL REFRIGERANTE (COMPLIANCE AMBIENTAL)
@@ -188,7 +177,7 @@ try:
                 st.session_state.historial_scada = pd.concat([st.session_state.historial_scada, nueva_fila]).tail(30)
 
             # --- RE-RENDERIZAR MEDIDORES EN SUS MARCADORES ---
-            with marcador_alerta.checkbox_visible if hasattr(marcador_alerta, 'checkbox_visible') else marcador_alerta.container():
+            with marcador_alerta.container():
                 if temp > 10.0:
                     st.error(f"⚠️ **DESVIACIÓN CRÍTICA DETECTADA** | Pérdida de Eficiencia Térmica. Temperatura: {temp} °C")
                 else:
@@ -225,6 +214,9 @@ try:
 
             with marcador_sincronizacion.container():
                 st.caption(f"Última lectura del bus de datos IoT: {actualizacion} | REYES THERMOENERGY E.I.R.L.")
+        else:
+            with marcador_alerta.container():
+                st.warning("⚠️ Esperando flujo de datos desde el nodo de instrumentación...")
 
         # Pausa e iteración controlada del framework de Streamlit
         time.sleep(2)
