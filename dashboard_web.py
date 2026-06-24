@@ -17,18 +17,15 @@ st.set_page_config(
     initial_sidebar_state="collapsed"
 )
 
-# # Inicializar Firebase de forma segura (Adaptable para Local y Nube)
+# # Inicializar Firebase de forma segura evitando duplicados en la nube
 if not firebase_admin._apps:
-    if os.path.exists("llave_lab.json.json"):
-        # Si estás en tu PC, lee el archivo local
-        cred = credentials.Certificate("llave_lab.json.json")
-    else:
-        # Si está en la nube de Streamlit, lee los secretos seguros incorporados
-        cred = credentials.Certificate(dict(st.secrets["firebase"]))
-        
+    # Aquí va tu código actual de inicialización (usa tus credenciales y tu URL)
     firebase_admin.initialize_app(cred, {
         'databaseURL': 'https://lab-hvac-r-reyesthermoenergy-default-rtdb.firebaseio.com/'
     })
+else:
+    # Si ya existía la app, simplemente usamos la que está activa
+    firebase_admin.get_app()
 
 # Conexión al nodo del sensor en Firebase
 nodo_sensor = db.reference('laboratorio_automatizacion/sensor_1')
