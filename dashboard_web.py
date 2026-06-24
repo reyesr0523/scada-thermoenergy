@@ -3,7 +3,6 @@ import firebase_admin
 from firebase_admin import credentials
 from firebase_admin import db
 import pandas as pd
-import time
 from datetime import datetime
 import os
 from PIL import Image
@@ -94,7 +93,7 @@ with col_titulo:
 st.markdown("---")
     
 # ==============================================================================
-# 2. NUEVO SECTOR: CONFIGURACIÓN DEL REFRIGERANTE (COMPLIANCE AMBIENTAL)
+# 2. SECTOR: CONFIGURACIÓN DEL REFRIGERANTE (COMPLIANCE AMBIENTAL)
 # ==============================================================================
 st.markdown("### 🎛️ Configuración de Fluido Refrigerante en Planta")
 
@@ -115,33 +114,14 @@ DATOS_REFRIGERANTES = {
 gas_info = DATOS_REFRIGERANTES[refrigerante_seleccionado]
 gwp_actual = gas_info["GWP"]
 
-# Contenedores dinámicos para actualización en tiempo real (Dentro del bucle)
-marcador_alerta = st.empty()
-marcador_kpis_tecnicos = st.empty()
-marcador_sustentabilidad = st.empty()
-marcador_grafica = st.empty()
-marcador_sincronizacion = st.empty()
-
-# Elemento estático para la descarga (FUERA del bucle infinito para evitar duplicados)
-st.markdown("### 📥 Reportes de Auditoría Ambiental")
-
-def obtener_csv():
-    return st.session_state.historial_scada.to_csv(index=False).encode('utf-8')
-
-st.download_button(
-    label="📥 Exportar Reporte Técnico e ISO (HACCP / ISO 14064)",
-    data=obtener_csv(),
-    file_name=f"Reyes_Thermoenergy_EcoSCADA_{datetime.now().strftime('%Y%m%d')}.csv",
-    mime="text/csv",
-    use_container_width=True,
-    key="boton_descarga_scada"
-)
-
 # ==============================================================================
-# 3. BUCLE SCADA EN TIEMPO REAL CON CÁLCULOS TERMODINÁMICOS
+# 3. FRAGMENTO DE TELEMETRÍA AUTOMÁTICA EN TIEMPO REAL (SCADA ECO-IoT)
 # ==============================================================================
-try:
-    while True:
+
+# Este decorador ejecuta de forma segura el ciclo de lectura cada 2 segundos en segundo plano
+@st.fragment(run_every=2)
+def renderizar_scada_dinamico(gwp_valor, info_gas):
+    try:
         datos = nodo_sensor.get()
         
         if datos:
@@ -176,51 +156,59 @@ try:
                 }])
                 st.session_state.historial_scada = pd.concat([st.session_state.historial_scada, nueva_fila]).tail(30)
 
-            # --- RE-RENDERIZAR MEDIDORES EN SUS MARCADORES CORREGIDOS ---
-            with marcador_alerta.container():
-                if temp > 10.0:
-                    st.error(f"⚠️ **DESVIACIÓN CRÍTICA DETECTADA** | Pérdida de Eficiencia Térmica. Temperatura: {temp} °C")
-                else:
-                    st.success("✅ **SISTEMA EFICIENTE** | Operación bajo parámetros de Consumo Óptimo (HACCP & ISO 14001)")
+            # --- RENDERIZAR EN INTERFAZ ---
+            if temp > 10.0:
+                st.error(f"⚠️ **DESVIACIÓN CRÍTICA DETECTADA** | Pérdida de Eficiencia Térmica. Temperatura: {temp} °C")
+            else:
+                st.success("✅ **SISTEMA EFICIENTE** | Operación bajo parámetros de Consumo Óptimo (HACCP & ISO 14001)")
 
-            with marcador_kpis_tecnicos.container():
-                st.markdown("### 📊 Monitoreo de Variables Técnicas (Ciclo Frigorífico)")
-                col1, col2, col3 = st.columns(3)
-                col1.metric(label="Temperatura Sensor 1", value=f"{temp} °C")
-                col2.metric(label="Estado del Compresor", value=f"RUNNING ({estado})" if estado == "ON" else "STANDBY (OFF)")
-                col3.metric(label="Eficiencia del Ciclo (COP)", value=f"{cop_estimado} Pts" if cop_estimado > 0 else "0.00 STR")
+            st.markdown("### 📊 Monitoreo de Variables Técnicas (Ciclo Frigorífico)")
+            col1, col2, col3 = st.columns(3)
+            col1.metric(label="Temperatura Sensor 1", value=f"{temp} °C")
+            col2.metric(label="Estado del Compresor", value=f"RUNNING ({estado})" if estado == "ON" else "STANDBY (OFF)")
+            col3.metric(label="Eficiencia del Ciclo (COP)", value=f"{cop_estimado} Pts" if cop_estimado > 0 else "0.00 STR")
 
-            with marcador_sustentabilidad.container():
-                st.markdown("### 🌱 Indicadores Ambientales y Potencial de Gas (ISO 14064)")
-                col_sust_1, col_sust_2, col_sust_3 = st.columns(3)
+            st.markdown("### 🌱 Indicadores Ambientales y Potencial de Gas (ISO 14064)")
+            col_sust_1, col_sust_2, col_sust_3 = st.columns(3)
+            col_sust_1.metric(label="Demanda Instantánea", value=f"{consumo_kw} kW")
+            col_sust_2.metric(label="Huella de Carbono (Red)", value=f"{emisiones_co2} kg CO₂/h")
+            
+            if gwp_valor > 1000:
+                col_sust_3.metric(label="Índice PCA / GWP (Fuga)", value=f"{gwp_valor}", delta="ALTO IMPACTO", delta_color="inverse")
+            else:
+                col_sust_3.metric(label="Índice PCA / GWP (Fuga)", value=f"{gwp_valor}", delta="ECO-EFICIENTE")
                 
-                col_sust_1.metric(label="Demanda Instantánea", value=f"{consumo_kw} kW")
-                col_sust_2.metric(label="Huella de Carbono (Red)", value=f"{emisiones_co2} kg CO₂/h")
-                
-                # KPI Dinámico de Impacto por Fuga (GWP)
-                if gwp_actual > 1000:
-                    col_sust_3.metric(label="Índice PCA / GWP (Fuga)", value=f"{gwp_actual}", delta="ALTO IMPACTO", delta_color="inverse")
-                else:
-                    col_sust_3.metric(label="Índice PCA / GWP (Fuga)", value=f"{gwp_actual}", delta="ECO-EFICIENTE")
-                    
-                st.caption(f"**Seguridad ASHRAE:** {gas_info['Clase']} | **Estatus Normativo:** {gas_info['Norma']}")
-                st.markdown("---")
+            st.caption(f"**Seguridad ASHRAE:** {info_gas['Clase']} | **Estatus Normativo:** {info_gas['Norma']}")
+            st.markdown("---")
 
-            with marcador_grafica.container():
-                st.markdown("### 📈 Líneas de Tendencia del Sistema Integrado")
-                if not st.session_state.historial_scada.empty:
-                    df_grafica = st.session_state.historial_scada.set_index("Fecha_Hora")
-                    st.line_chart(df_grafica[["Temperatura_C", "Consumo_kW"]])
+            st.markdown("### 📈 Líneas de Tendencia del Sistema Integrado")
+            if not st.session_state.historial_scada.empty:
+                df_grafica = st.session_state.historial_scada.set_index("Fecha_Hora")
+                st.line_chart(df_grafica[["Temperatura_C", "Consumo_kW"]])
 
-            with marcador_sincronizacion.container():
-                st.caption(f"Última lectura del bus de datos IoT: {actualizacion} | REYES THERMOENERGY E.I.R.L.")
+            st.caption(f"Última lectura del bus de datos IoT: {actualizacion} | REYES THERMOENERGY E.I.R.L.")
         else:
-            with marcador_alerta.container():
-                st.warning("⚠️ Esperando flujo de datos desde el nodo de instrumentación...")
+            st.warning("⚠️ Esperando flujo de datos desde el nodo de instrumentación...")
+            
+    except Exception as loop_error:
+        st.error(f"Error en adquisición de datos en tiempo real: {loop_error}")
 
-        # Pausa e iteración controlada del framework de Streamlit
-        time.sleep(2)
-        st.rerun()
+# Llamar al renderizador dinámico pasándole los datos del gas seleccionado
+renderizar_scada_dinamico(gwp_actual, gas_info)
 
-except Exception as loop_error:
-    st.error(f"Error en el ciclo de actualización SCADA: {loop_error}")
+# ==============================================================================
+# 4. SECTOR ESTÁTICO: REPORTE DE AUDITORÍA
+# ==============================================================================
+st.markdown("### 📥 Reportes de Auditoría Ambiental")
+
+def obtener_csv():
+    return st.session_state.historial_scada.to_csv(index=False).encode('utf-8')
+
+st.download_button(
+    label="📥 Exportar Reporte Técnico e ISO (HACCP / ISO 14064)",
+    data=obtener_csv(),
+    file_name=f"Reyes_Thermoenergy_EcoSCADA_{datetime.now().strftime('%Y%m%d')}.csv",
+    mime="text/csv",
+    use_container_width=True,
+    key="boton_descarga_scada"
+)
