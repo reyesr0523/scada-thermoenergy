@@ -17,18 +17,18 @@ st.set_page_config(
     initial_sidebar_state="collapsed"
 )
 
-# INICIALIZACIÓN BLINDADA DE FIREBASE (ANTI-DUPLICADOS Y ALERTA DE AUSENCIA)
+# INICIALIZACIÓN BLINDADA DE FIREBASE (ANTI-DUPLICADOS)
 try:
-    # Intentamos obtener la app por defecto si ya fue creada por el servidor
+    # Intentamos jalar la app si ya fue creada por el servidor de Streamlit
     firebase_admin.get_app()
 except ValueError:
-    # Si no existe, la inicializamos desde cero de forma limpia con los Secrets
+    # Si no existe, la inicializamos de forma limpia desde cero usando los Secrets
     try:
         creds_dict = {
             "type": st.secrets["firebase"]["type"],
             "project_id": st.secrets["firebase"]["project_id"],
             "private_key_id": st.secrets["firebase"]["private_key_id"],
-            # Filtro de seguridad obligatorio para saltos de línea en la firma JWT:
+            # Filtro estricto para asegurar saltos de línea correctos en la firma PEM:
             "private_key": st.secrets["firebase"]["private_key"].replace("\\n", "\n"),
             "client_email": st.secrets["firebase"]["client_email"],
             "client_id": st.secrets["firebase"]["client_id"],
@@ -102,7 +102,7 @@ DATOS_REFRIGERANTES = {
 gas_info = DATOS_REFRIGERANTES[refrigerante_seleccionado]
 gwp_actual = gas_info["GWP"]
 
-# --- CONTENEDORES ESTÁTICOS PARA EVITAR "THREADING VIOLATION" ---
+# --- CONTENEDORES ESTÁTICOS PARA EVITAR VIOLACIONES DE HILOS ---
 marcador_alerta = st.container()
 marcador_kpis_tecnicos = st.container()
 marcador_sustentabilidad = st.container()
@@ -127,9 +127,10 @@ st.download_button(
 )
 
 # ==============================================================================
-# 4. CICLO DE ADQUISICIÓN EN TIEMPO REAL RE-ESTRUCTURADO
+# 4. CICLO DE ADQUISICIÓN EN TIEMPO REAL CON BUCLE CORREGIDO
 # ==============================================================================
 try:
+    # Agregamos el bucle While True para que la adquisición no deje colgado al servidor
     while True:
         datos = nodo_sensor.get()
         
@@ -163,7 +164,7 @@ try:
                 }])
                 st.session_state.historial_scada = pd.concat([st.session_state.historial_scada, nueva_fila]).tail(30)
 
-            # --- RE-RENDERIZAR INTERFAZ CLÁSICA ---
+            # --- RE-RENDERIZAR EN CONTENEDORES ESTÁTICOS ---
             with marcador_alerta:
                 if temp > 10.0:
                     st.error(f"⚠️ **DESVIACIÓN CRÍTICA DETECTADA** | Pérdida de Eficiencia Térmica. Temperatura: {temp} °C")
@@ -202,7 +203,7 @@ try:
         else:
             st.warning("⚠️ Conectado a Firebase, pero el nodo 'sensor_1' está vacío.")
 
-        # Auto-refresco controlado y seguro para evitar ciclos infinitos bloqueantes
+        # Pausa de telemetría e instrucción de refresco seguro
         time.sleep(2)
         st.rerun()
 
